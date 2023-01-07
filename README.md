@@ -1,7 +1,23 @@
 
-# Welcome to your CDK Python project!
+# Overview
+This repo is part of the ECS Tasks Scaling POC, which contains an `API Gateway + Lambda + ECS` stack in account 2.
 
-This is a blank project for CDK development with Python.
+The first Lambda is to update the ECS tasks size, and the API Gateway calls the second Lambda to check if the ECS tasks size has been updated.
+
+Please see SNSForECSScaling repo for SNS in account 1.
+
+![Architecture](ScalingArchitecture.png)
+
+
+## What can be improved
+This architecture does not enable auto scaling for ECS. We use [boto3 ECS.update_service](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ecs.html#ECS.Client.update_service) API to update the ECS tasks size.
+
+With auto scaling enabled, we can disable scale in while manually updating the ECS tasks size. 
+
+Use the [update_scaling_plan](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/autoscaling-plans.html#AutoScalingPlans.Client.update_scaling_plan) API to set `DisableScaleIn` as `True`, and set `DisableScaleIn` as `False` when scale down to original size.
+
+
+## CDK
 
 The `cdk.json` file tells the CDK Toolkit how to execute your app.
 
@@ -42,17 +58,7 @@ At this point you can now synthesize the CloudFormation template for this code.
 ```
 $ cdk synth
 ```
-
-To add additional dependencies, for example other CDK libraries, just add
-them to your `setup.py` file and rerun the `pip install -r requirements.txt`
-command.
-
-## Useful commands
-
- * `cdk ls`          list all stacks in the app
- * `cdk synth`       emits the synthesized CloudFormation template
- * `cdk deploy`      deploy this stack to your default AWS account/region
- * `cdk diff`        compare deployed stack with current state
- * `cdk docs`        open CDK documentation
-
-Enjoy!
+Then, you can deploy your cdk.
+```
+$ cdk deploy
+```
