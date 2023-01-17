@@ -26,7 +26,8 @@ class EcsStack(Stack):
             "EcsPocFargateService",
             cluster=cluster,
             task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
-                image=ecs.ContainerImage.from_registry("amazon/amazon-ecs-sample")
+                image=ecs.ContainerImage.from_registry(
+                    "amazon/amazon-ecs-sample")
             ),
             desired_count=1,
             public_load_balancer=True,
@@ -66,7 +67,8 @@ class EcsStack(Stack):
             vpc=vpc,
         )
 
-        topic.add_subscription(subscriptions.LambdaSubscription(update_function))
+        topic.add_subscription(
+            subscriptions.LambdaSubscription(update_function))
 
         ecsPermissions = iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
@@ -77,11 +79,21 @@ class EcsStack(Stack):
         update_function.add_to_role_policy(ecsPermissions)
         read_function.add_to_role_policy(ecsPermissions)
 
+        api_gateway_policy = iam.PolicyDocument(
+            statements=[iam.PolicyStatement(
+                actions=["execute-api:Invoke"],
+                principals=[iam.AccountPrincipal("425039140189")],
+                # put your api arn here
+                resources=["*"] 
+            )]
+        )
+
         apigateway.LambdaRestApi(
             self,
             "EcsReadAPI",
             handler=read_function,
             endpoint_configuration=apigateway.EndpointConfiguration(
-                types=[apigateway.EndpointType.REGIONAL]
+                types=[apigateway.EndpointType.REGIONAL.PRIVATE]
             ),
+            policy=api_gateway_policy
         )
