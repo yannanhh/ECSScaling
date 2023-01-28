@@ -26,11 +26,15 @@ class EcsStack(Stack):
             "EcsPocFargateService",
             cluster=cluster,
             task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
-                image=ecs.ContainerImage.from_registry("amazon/amazon-ecs-sample")
+                image=ecs.ContainerImage.from_registry(
+                    "amazon/amazon-ecs-sample")
             ),
             desired_count=1,
             public_load_balancer=True,
         )
+
+        cluster_arn = fargate_service.cluster.cluster_arn
+        service_arn = fargate_service.service.service_arn
 
         CfnOutput(
             self,
@@ -43,7 +47,7 @@ class EcsStack(Stack):
         topic = sns.Topic.from_topic_arn(
             self,
             "EcsPocSnsTopic",
-            "arn:aws-cn:sns:cn-northwest-1:858624197098:SnsStack-SnsTopic2C1570A4-CBPHy5o5O2JJ",
+            "arn:aws:sns:us-west-2:093575270853:SnsStack-SnsTopic2C1570A4-vQxMRmZoFWHQ",
         )
 
         update_function = aws_lambda.Function(
@@ -54,6 +58,10 @@ class EcsStack(Stack):
             code=aws_lambda.Code.from_asset("function"),
             handler="update.handler",
             vpc=vpc,
+            environment={
+                "CLUSTER_ARN": cluster_arn,
+                "SERVICE_ARN": service_arn,
+            }
         )
 
         read_function = aws_lambda.Function(
@@ -64,9 +72,14 @@ class EcsStack(Stack):
             code=aws_lambda.Code.from_asset("function"),
             handler="read.handler",
             vpc=vpc,
+            environment={
+                "CLUSTER_ARN": cluster_arn,
+                "SERVICE_ARN": service_arn,
+            }
         )
 
-        topic.add_subscription(subscriptions.LambdaSubscription(update_function))
+        topic.add_subscription(
+            subscriptions.LambdaSubscription(update_function))
 
         ecsPermissions = iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
@@ -82,6 +95,26 @@ class EcsStack(Stack):
             "EcsReadAPI",
             handler=read_function,
             endpoint_configuration=apigateway.EndpointConfiguration(
-                types=[apigateway.EndpointType.REGIONAL]
-            ),
+                types=[apigateway.EndpointType.PRIVATE]),
+            policy=iam.PolicyDocument(
+                statements=[
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=['execute-api:Invoke'],
+                        principals=[iam.StarPrincipal()],
+                        resources=['execute-api:/*/*/*'],
+                    ),
+                    iam.PolicyStatement(
+                        effect=iam.Effect.DENY,
+                        principals=[iam.StarPrincipal()],
+                        actions=['execute-api:Invoke'],
+                        resources=['execute-api:/*/*/*'],
+                        conditions={
+                            'StringNotEquals': {
+                                "aws:sourceVpce": 'vpce-0ff79e86f67595ca1'
+                            }
+                        }
+                    )
+                ]
+            )
         )

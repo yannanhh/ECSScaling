@@ -1,14 +1,18 @@
 import boto3
 import json
+import os
 
 
 def handler(event, context):
     ecs = boto3.client("ecs")
 
+    CLUSTER_ARN = os.getenv("CLUSTER_ARN")
+    SERVICE_ARN = os.getenv("SERVICE_ARN")
+
     try:
         response = ecs.describe_services(
-            cluster="arn:aws-cn:ecs:cn-northwest-1:425039140189:cluster/EcsStack-EcsPocCluster08C3EA8A-LP8qIBbIc9So",
-            services=["EcsStack-EcsPocFargateService6F213248-eCS49Dp66DZi"],
+            cluster=CLUSTER_ARN,
+            service=SERVICE_ARN,
         )
 
         desired_count = response["services"][0]["desiredCount"]
